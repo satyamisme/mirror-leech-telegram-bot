@@ -9,4 +9,4 @@ echo yes | sudo docker container prune
 #echo yes | sudo docker image prune -a
 sudo dockerd
 sudo docker build . -t leech
-sudo docker run -p 82:82 leech
+sudo docker run -p 52:52 leech
