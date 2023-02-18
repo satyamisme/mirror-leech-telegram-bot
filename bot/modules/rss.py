@@ -553,6 +553,7 @@ Timeout: 60 sec.
 
 async def rssMonitor():
     if not config_dict['RSS_CHAT_ID']:
+        LOGGER.warning('RSS_CHAT_ID not added! Shutting down rss scheduler...')
         scheduler.shutdown(wait=False)
         return
     if len(rss_dict) == 0:
@@ -623,7 +624,7 @@ async def rssMonitor():
         scheduler.pause()
 
 def addJob(delay):
-    scheduler.add_job(rssMonitor, trigger=IntervalTrigger(seconds=delay), id='0', name='RSS', mnisfire_grace_time=15,
+    scheduler.add_job(rssMonitor, trigger=IntervalTrigger(seconds=delay), id='0', name='RSS', misfire_grace_time=15,
                       max_instances=1, next_run_time=datetime.now()+timedelta(seconds=20), replace_existing=True)
 
 addJob(RSS_DELAY)
