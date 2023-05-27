@@ -68,20 +68,21 @@ class MirrorLeechListener:
             await DbManger().add_incomplete_task(self.message.chat.id, self.message.link, self.tag)
 
     async def onDownloadComplete(self):
-        if len(self.sameDir) > 0:
-            await sleep(3)
-            for _ in range(10):
-                if len(self.sameDir) > 1:
-                    break
-                else:
-                    await sleep(1)
         multi_links = False
+        while True:
+            if self.sameDir:
+                if self.sameDir['total'] == 1 or self.sameDir['total'] > 1 and len(self.sameDir['tasks']) > 1:
+                    break
+            else:
+                break
+            await sleep(0)
         async with download_dict_lock:
-            if len(self.sameDir) > 1:
-                self.sameDir.remove(self.uid)
+            if self.sameDir and self.sameDir['total'] > 1:
+                self.sameDir['tasks'].remove(self.uid)
+                self.sameDir['total'] -= 1
                 folder_name = (await listdir(self.dir))[-1]
                 path = f"{self.dir}/{folder_name}"
-                des_path = f"{DOWNLOAD_DIR}{list(self.sameDir)[0]}/{folder_name}"
+                des_path = f"{DOWNLOAD_DIR}{list(self.sameDir['tasks'])[0]}/{folder_name}"
                 await makedirs(des_path, exist_ok=True)
                 for item in await listdir(path):
                     if item.endswith(('.aria2', '.!qB')):
@@ -406,8 +407,9 @@ class MirrorLeechListener:
             if self.uid in download_dict.keys():
                 del download_dict[self.uid]
             count = len(download_dict)
-            if self.uid in self.sameDir:
-                self.sameDir.remove(self.uid)
+            if self.uid in self.sameDir['tasks']:
+                self.sameDir['tasks'].remove(self.uid)
+                self.sameDir['total'] -= 1
         msg = f"{self.tag} Download: {escape(error)}"
         await sendMessage(self.message, msg, button)
         if count == 0:
@@ -441,8 +443,6 @@ class MirrorLeechListener:
             if self.uid in download_dict.keys():
                 del download_dict[self.uid]
             count = len(download_dict)
-            if self.uid in self.sameDir:
-                self.sameDir.remove(self.uid)
         await sendMessage(self.message, f"{self.tag} {escape(error)}")
         if count == 0:
             await self.clean()
