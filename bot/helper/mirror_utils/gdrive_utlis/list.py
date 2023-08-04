@@ -12,7 +12,7 @@ from natsort import natsorted
 from bot import config_dict, user_data
 from bot.helper.ext_utils.db_handler import DbManger
 from bot.helper.telegram_helper.button_build import ButtonMaker
-from bot.helper.telegram_helper.message_utils import sendMessage, editMessage
+from bot.helper.telegram_helper.message_utils import sendMessage, editMessage, deleteMessage
 from bot.helper.ext_utils.bot_utils import new_thread, get_readable_file_size, new_task, get_readable_time, update_user_ldata
 from bot.helper.mirror_utils.gdrive_utlis.helper import GoogleDriveHelper
 
@@ -31,7 +31,7 @@ async def id_updates(_, query, obj):  # sourcery skip: avoid-builtin-shadow
         obj.id = 'Task has been cancelled!'
         obj.is_cancelled = True
         obj.event.set()
-        await message.delete()
+        await deleteMessage(message)
         return
     if obj.query_proc:
         return
@@ -61,7 +61,7 @@ async def id_updates(_, query, obj):  # sourcery skip: avoid-builtin-shadow
             obj.parents.append({'id': i['id'], 'name': i['name']})
             await obj.get_items()
         else:
-            await message.delete()
+            await deleteMessage(message)
             obj.event.set()
     elif data[1] == 'ps':
         if obj.page_step == int(data[2]):
@@ -76,7 +76,7 @@ async def id_updates(_, query, obj):  # sourcery skip: avoid-builtin-shadow
         obj.item_type = data[2]
         await obj.get_items()
     elif data[1] == 'cur':
-        await message.delete()
+        await deleteMessage(message)
         obj.event.set()
     elif data[1] == 'def':
         id = obj.id if obj.token_path == 'token.pickle' else f'mtp:{obj.id}'
@@ -247,10 +247,11 @@ class gdriveList(GoogleDriveHelper):
             msg += f'\nToken Path: {self.token_path}'
             msg += f'\nTimeout: {get_readable_time(self.__timeout-(time()-self.__time))}'
             buttons = ButtonMaker()
-            buttons.ibutton('root', "gdq dr root")
+            buttons.ibutton('root', "gdq dr 0")
             self.drives.clear()
             self.parents.clear()
-            for index, item in enumerate(drives):
+            self.drives = [{'id': 'root', 'name': 'root'}]
+            for index, item in enumerate(drives, start=1):
                 self.drives.append({'id': item['id'], 'name': item['name']})
                 buttons.ibutton(item['name'], f"gdq dr {index}")
             if self.__token_user and self.__token_owner:
@@ -273,13 +274,16 @@ class gdriveList(GoogleDriveHelper):
             await self.__send_list_message(msg, button)
         else:
             self.token_path = 'token.pickle' if self.__token_owner else self.user_token_path
-            await self.list_drives
+            await self.list_drives()
 
     async def get_pevious_id(self):
         if self.parents:
             self.parents.pop()
-            self.id = self.parents[-1]['id']
-            await self.get_items()
+            if self.parents:
+                self.id = self.parents[-1]['id']
+                await self.get_items()
+            else:
+                await self.list_drives()
         else:
             await self.list_drives()
 
@@ -298,7 +302,7 @@ class gdriveList(GoogleDriveHelper):
             await self.list_drives()
         await wrap_future(future)
         if self.__reply_to:
-            await self.__reply_to.delete()
+            await deleteMessage(self.__reply_to)
         if self.token_path != 'token.pickle' and not self.is_cancelled:
             return f'mtp:{self.id}'.replace('>', '').replace('<', '')
         return self.id.replace('>', '').replace('<', '')

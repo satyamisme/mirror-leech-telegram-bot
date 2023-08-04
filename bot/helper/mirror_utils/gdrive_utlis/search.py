@@ -2,7 +2,7 @@
 from logging import getLogger
 from urllib.parse import quote as rquote
 
-from bot import DRIVES_NAMES, DRIVES_IDS, INDEX_URLS
+from bot import DRIVES_NAMES, DRIVES_IDS, INDEX_URLS, user_data
 from bot.helper.ext_utils.bot_utils import get_readable_file_size
 from bot.helper.mirror_utils.gdrive_utlis.helper import GoogleDriveHelper
 
@@ -11,8 +11,8 @@ LOGGER = getLogger(__name__)
 
 class gdSearch(GoogleDriveHelper):
 
-    def __init__(self, stopDup=False, noMulti=False, isRecursive=True, itemType=''):
-        super().__init__()
+    def __init__(self, stopDup=False, noMulti=False, isRecursive=True, itemType='', listener=None):
+        super().__init__(listener)
         self.__stopDup = stopDup
         self.__noMulti = noMulti
         self.__isRecursive = isRecursive
@@ -68,14 +68,9 @@ class gdSearch(GoogleDriveHelper):
             LOGGER.error(err)
             return {'files': []}
 
-    def drive_list(self, fileName, target_id=''):
-        INDEX = ''
+    def drive_list(self, fileName, target_id='', user_id=''):
         if target_id.startswith('mtp:'):
-            self.token_path = f'tokens/{self.listener.user_id}.pickle'
-            self.use_sa = False
-            if self.listener.user_dict.get('index_url'):
-                INDEX = self.listener.user_dict['index_url']
-            drives = [('User Choice', target_id, INDEX)]
+            drives = self.get_user_drive(target_id, user_id)
         else:
             drives = zip(DRIVES_NAMES, DRIVES_IDS, INDEX_URLS)
         self.service = self.authorize()
@@ -84,7 +79,7 @@ class gdSearch(GoogleDriveHelper):
         contents_no = 0
         telegraph_content = []
         Title = False
-        if len(DRIVES_IDS) > 1 and not target_id.startswith('mtp:'):
+        if not target_id.startswith('mtp:') and len(DRIVES_IDS) > 1:
             token_service = self.alt_authorize()
             if token_service is not None:
                 self.service = token_service
@@ -116,7 +111,7 @@ class gdSearch(GoogleDriveHelper):
                     furl = self.G_DRIVE_DIR_BASE_DOWNLOAD_URL.format(
                         file.get('id'))
                     msg += f"⁍<a href='{self.G_DRIVE_DIR_BASE_DOWNLOAD_URL.format(file.get('id'))}'>{file.get('name')}" \
-                        f"</a> (shortcut)"
+                            f"</a> (shortcut)"
                 else:
                     furl = self.G_DRIVE_BASE_DOWNLOAD_URL.format(
                         file.get('id'))
@@ -140,3 +135,11 @@ class gdSearch(GoogleDriveHelper):
             telegraph_content.append(msg)
 
         return telegraph_content, contents_no
+
+    def get_user_drive(self, target_id, user_id):
+        dest_id = target_id.lstrip('mtp:')
+        self.token_path = f'tokens/{user_id}.pickle'
+        self.use_sa = False
+        user_dict = user_data.get(user_id, {})
+        INDEX = user_dict['index_url'] if user_dict.get('index_url') else ''
+        return [('User Choice', dest_id, INDEX)]
