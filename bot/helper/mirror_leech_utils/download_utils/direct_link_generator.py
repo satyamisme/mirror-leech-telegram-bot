@@ -145,13 +145,14 @@ def direct_link_generator(link):
             "filelions.site",
             "filelions.live",
             "filelions.to",
+            "mycloudz.cc",
             "cabecabean.lol",
             "filelions.online",
             "embedwish.com",
-            "streamwish.com",
             "kitabmarkaz.xyz",
             "wishfast.top",
             "streamwish.to",
+            "kissmovies.net",
         ]
     ):
         return filelions_and_streamwish(link)
@@ -500,7 +501,7 @@ def krakenfiles(url):
             raise DirectDownloadLinkException(f"ERROR: {e.__class__.__name__}") from e
         html = HTML(_res.text)
         if post_url := html.xpath('//form[@id="dl-form"]/@action'):
-            post_url = f"https:{post_url[0]}"
+            post_url = f"https://krakenfiles.com{post_url[0]}"
         else:
             raise DirectDownloadLinkException("ERROR: Unable to find post link.")
         if token := html.xpath('//input[@id="dl-token"]/@value'):
@@ -1401,15 +1402,16 @@ def filelions_and_streamwish(url):
             "filelions.site",
             "cabecabean.lol",
             "filelions.online",
+            "mycloudz.cc",
         ]
     ):
         apiKey = config_dict["FILELION_API"]
-        apiUrl = "https://api.filelions.co"
+        apiUrl = "https://vidhideapi.com"
     elif any(
         x in hostname
         for x in [
             "embedwish.com",
-            "streamwish.com",
+            "kissmovies.net",
             "kitabmarkaz.xyz",
             "wishfast.top",
             "streamwish.to",
